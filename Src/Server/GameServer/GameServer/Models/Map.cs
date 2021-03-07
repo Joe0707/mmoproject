@@ -33,6 +33,7 @@ namespace GameServer.Models
         {
             get { return this.Define.ID; }
         }
+        public int InstanceID { get; set; }
         internal MapDefine Define;
 
         /// <summary>
@@ -45,20 +46,23 @@ namespace GameServer.Models
         /// 刷怪管理器
         /// </summary>
         SpawnManager SpawnManager = new SpawnManager();
-
+        public Battle.Battle Battle;
         public MonsterManager MonsterManager = new MonsterManager();
 
-        internal Map(MapDefine define)
+        internal Map(MapDefine define, int instanceId)
         {
             this.Define = define;
+            this.InstanceID = instanceId;
             this.SpawnManager.Init(this);
             this.MonsterManager.Init(this);
+            this.Battle = new Battle.Battle(this);
         }
 
 
         internal void Update()
         {
             SpawnManager.Update();
+            this.Battle.Update();
         }
 
         /// <summary>
@@ -68,8 +72,7 @@ namespace GameServer.Models
         internal void CharacterEnter(NetConnection<NetSession> conn, Character character)
         {
             Log.InfoFormat("CharacterEnter: Map:{0} characterId:{1}", this.Define.ID, character.Id);
-            character.Info.mapId = this.ID;
-            this.MapCharacters[character.Id] = new MapCharacter(conn, character);
+            AddCharacter(conn, character);
 
             conn.Session.Response.mapCharacterEnter = new MapCharacterEnterResponse();
             conn.Session.Response.mapCharacterEnter.mapId = this.Define.ID;
@@ -86,9 +89,19 @@ namespace GameServer.Models
             conn.SendResponse();
         }
 
+        public void AddCharacter(NetConnection<NetSession> conn, Character character)
+        {
+            Log.InfoFormat("CharacterEnter Map characterId");
+            character.Info.mapId = this.ID;
+            character.OnEnterMap(this);
+            if (!this.MapCharacters.ContainsKey(character.Id)) {
+                this.MapCharacters[character.Id] = new MapCharacter(conn, character);
+            }
+        }
 
         internal void CharacterLeave(Character cha)
         {
+            cha.OnLeaveMap(this);
             Log.InfoFormat("CharacterLeave: Map:{0} characterId:{1}", this.Define.ID, cha.Id);
             foreach (var kv in this.MapCharacters)
             {
@@ -147,9 +160,24 @@ namespace GameServer.Models
         internal void MonsterEnter(Monster monster)
         {
             Log.InfoFormat("MonsterEnter: Map:{0} monsterId:{1}", this.Define.ID, monster.Id);
+            monster.OnEnterMap(this);
             foreach (var kv in this.MapCharacters)
             {
                 this.AddCharacterEnterMap(kv.Value.connection, monster.Info);
+            }
+        }
+
+        internal void BroadcastBattleResponse(NetMessageResponse response)
+        {
+            foreach(var kv in this.MapCharacters)
+            {
+                if (response.skillCast != null)
+                    kv.Value.connection.Session.Response.skillCast = response.skillCast;
+                if (response.skillHits != null)
+                    kv.Value.connection.Session.Response.skillHits = response.skillHits;
+                if (response.buffRes != null)
+                    kv.Value.connection.Session.Response.buffRes = response.buffRes;
+                kv.Value.connection.SendResponse();
             }
         }
     }

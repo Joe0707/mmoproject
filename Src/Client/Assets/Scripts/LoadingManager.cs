@@ -43,11 +43,14 @@ public class LoadingManager : MonoBehaviour {
         TestManager.Instance.Init();
         StatusService.Instance.Init();
         FriendService.Instance.Init();
-        //TeamService.Instance.Init();
-        //GuildService.Instance.Init();
+        TeamService.Instance.Init();
+        GuildService.Instance.Init();
         //ShopManager.Instance.Init();
-        //ChatService.Instance.Init();
-        //SoundManager.Instance.PlayMusic(SoundDefine.Music_Login);
+         ChatService.Instance.Init();
+        BattleService.Instance.Init();
+        ArenaService.Instance.Init();
+        SoundManager.Instance.PlayMusic(SoundDefine.Music_Login);
+        
         // Fake Loading Simulate
         for (float i = 50; i < 100;)
         {

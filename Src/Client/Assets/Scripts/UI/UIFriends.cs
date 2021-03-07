@@ -1,4 +1,5 @@
 ﻿using Models;
+using Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,7 +43,7 @@ namespace UI
             int friendId = 0;
             string friendName = "";
             if (!int.TryParse(input, out friendId)) friendName = input;
-            if (friendId == User.Instance.CurrentCharacter.Id || friendName == User.Instance.CurrentCharacter.Name)
+            if (friendId == User.Instance.CurrentCharacterInfo.Id || friendName == User.Instance.CurrentCharacterInfo.Name)
             {
                 tips = "开玩笑吗？不能添加自己哦";
                 return false;
@@ -54,6 +55,36 @@ namespace UI
         public void OnClickFriendChat()
         {
             MessageBox.Show("暂未开放");
+        }
+
+        public void OnClickFriendTeamInvite()
+        {
+            if (selectedItem == null)
+            {
+                MessageBox.Show("请选择要邀请的好友");
+                return;
+            }
+            if(selectedItem.info.Status==0)
+            {
+                MessageBox.Show("请选择在线的好友");
+                return;
+            }
+            MessageBox.Show(string.Format("确定要邀请好友加入队伍吗"), "邀请好友组队", MessageBoxType.Confirm, "邀请", "取消").OnYes=()=> { TeamService.Instance.SendTeamInviteRequest(this.selectedItem.info.friendInfo.Id, this.selectedItem.info.friendInfo.Name); };
+        }
+
+        public void OnClickChallenge()
+        {
+            if (selectedItem == null)
+            {
+                MessageBox.Show("请选择要挑战的好友");
+                return;
+            }
+            if(selectedItem.info.Status == 0)
+            {
+                MessageBox.Show("请选择在线的好友");
+                return;
+            }
+            MessageBox.Show(string.Format("确定要与好友进行竞技场挑战吗？"), "竞技场挑战", MessageBoxType.Confirm, "挑战", "取消").OnYes = () => { ArenaService.Instance.SendArenaChallengeRequest(this.selectedItem.info.friendInfo.Id, this.selectedItem.info.friendInfo.Name); };
         }
 
         public void OnClickFriendRemove()

@@ -53,7 +53,7 @@ namespace UI
         {
             this.shop = shop;
             this.title.text = shop.Name;
-            this.money.text = User.Instance.CurrentCharacter.Gold.ToString();
+            this.money.text = User.Instance.CurrentCharacterInfo.Gold.ToString();
         }
         private UIShopItem selectedItem;
         public void SelectShopItem(UIShopItem item)

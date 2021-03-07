@@ -57,9 +57,9 @@ namespace Managers
         {
             foreach(var kv in DataManager.Instance.Quests)
             {
-                if (kv.Value.LimitClass != CharacterClass.None && kv.Value.LimitClass != User.Instance.CurrentCharacter.Class)
+                if (kv.Value.LimitClass != CharacterClass.None && kv.Value.LimitClass != User.Instance.CurrentCharacterInfo.Class)
                     continue;
-                if (kv.Value.LimitLevel > User.Instance.CurrentCharacter.Level)
+                if (kv.Value.LimitLevel > User.Instance.CurrentCharacterInfo.Level)
                     continue;
                 if (this.allQuest.ContainsKey(kv.Key))
                     continue;

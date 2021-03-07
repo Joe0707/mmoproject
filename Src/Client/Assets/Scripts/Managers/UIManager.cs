@@ -22,12 +22,23 @@ public class UIManager:Singleton<UIManager>
             Resources = "UI/UITest",
             Cache = true
         });
+        this.UIResources.Add(typeof(UISetting), new UIElement()
+        {
+            Resources = "UI/UISetting",
+            Cache = true
+        });
         this.UIResources.Add(typeof(UIBag), new UIElement() { Resources = "UI/UIBag", Cache = true });
         this.UIResources.Add(typeof(UICharEquip), new UIElement() { Resources = "UI/UICharEquip", Cache = false });
         this.UIResources.Add(typeof(UIQuestSystem),new UIElement() { Resources = "UI/UIQuestSystem",Cache = false }
         );
         this.UIResources.Add(typeof(UIQuestDialog), new UIElement() { Resources = "UI/UIQuestDialog", Cache = false }
-                );        //this.UIResources.Add(typeof(UI))
+                );
+        this.UIResources.Add(typeof(UIGuild), new UIElement() { Resources = "UI/Guild/UIGuild", Cache = false });
+        this.UIResources.Add(typeof(UIGuildList), new UIElement() { Resources = "UI/Guild/UIGuildList", Cache = false }); this.UIResources.Add(typeof(UIGuildPopNoGuild), new UIElement() { Resources = "UI/Guild/UIGuildPopNoGuild", Cache = false }); this.UIResources.Add(typeof(UIGuild), new UIElement() { Resources = "UI/Guild/UIGuild", Cache = false });
+        this.UIResources.Add(typeof(UIGuildList), new UIElement() { Resources = "UI/Guild/UIGuildList", Cache = false }); this.UIResources.Add(typeof(UIGuildPopNoGuild), new UIElement() { Resources = "UI/Guild/UIGuildPopNoGuild", Cache = false }); this.UIResources.Add(typeof(UIGuildPopCreate), new UIElement() { Resources = "UI/Guild/UIGuildPopCreate", Cache = false });
+        this.UIResources.Add(typeof(UIGuildApplyList), new UIElement() { Resources = "UI/Guild/UIGuildApplyList", Cache = false });
+        this.UIResources.Add(typeof(UIPopCharMenu), new UIElement() { Resources = "UI/UIPopCharMenu", Cache = false });
+        this.UIResources.Add(typeof(UIRide), new UIElement() { Resources = "UI/UIRide", Cache = false });
     }
 
     ~UIManager()
@@ -37,6 +48,7 @@ public class UIManager:Singleton<UIManager>
 
     public T Show<T>()
     {
+        SoundManager.Instance.PlaySound(SoundDefine.SFX_UI_Win_Open);
         Type type = typeof(T);
         if (this.UIResources.ContainsKey(type))
         {
@@ -73,5 +85,10 @@ public class UIManager:Singleton<UIManager>
                 info.Instance = null;
             }
         }
+    }
+
+    public void Close<T>()
+    {
+        this.Close(typeof(T));
     }
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 using Entities;
 using Managers;
 
-public class EntityController : MonoBehaviour,IEntityNofity
+public class EntityController : MonoBehaviour,IEntityNofity,IEntityController
 {
 
     public Animator anim;
@@ -27,11 +27,12 @@ public class EntityController : MonoBehaviour,IEntityNofity
 
     public bool isPlayer = false;
 
-    //public RideController rideController;
+    public RideController rideController;
 
     private int currentRide = 0;
 
     public Transform rideBone;
+    private EntityEffecetManager EffectMgr;
 
     // Use this for initialization
     void Start () {
@@ -45,7 +46,7 @@ public class EntityController : MonoBehaviour,IEntityNofity
             rb.useGravity = false;
     }
 
-    void UpdateTransform()
+    public void UpdateTransform()
     {
         this.position = GameObjectTool.LogicToWorld(entity.position);
         this.direction = GameObjectTool.LogicToWorld(entity.direction);
@@ -94,7 +95,7 @@ public class EntityController : MonoBehaviour,IEntityNofity
         Destroy(this.gameObject);
     }
 
-    public void OnEntityEvent(EntityEvent entityEvent)
+    public void OnEntityEvent(EntityEvent entityEvent,int param)
     {
         switch(entityEvent)
         {
@@ -111,40 +112,40 @@ public class EntityController : MonoBehaviour,IEntityNofity
             case EntityEvent.Jump:
                 anim.SetTrigger("Jump");
                 break;
-           // case EntityEvent.Ride:
-           //     {
-           ////         this.Ride(param);
-           //     }
-           //     break;
+            case EntityEvent.Ride:
+                {
+                    this.Ride(param);
+                }
+                break;
         }
-        //if (this.rideController != null) this.rideController.OnEntityEvent(entityEvent, param);
+        if (this.rideController != null) this.rideController.OnEntityEvent(entityEvent, param);
     }
 
 
     public void Ride(int rideId)
     {
-        //if (currentRide == rideId) return;
-        //currentRide = rideId;
-        //if (rideId >0)
-        //{
-        //    this.rideController = GameObjectManager.Instance.LoadRide(rideId, this.transform);
-        //}
-        //else
-        //{
-        //    Destroy(this.rideController.gameObject);
-        //    this.rideController = null;
-        //}
+        if (currentRide == rideId) return;
+        currentRide = rideId;
+        if (rideId > 0)
+        {
+            this.rideController = GameObjectManager.Instance.LoadRide(rideId, this.transform);
+        }
+        else
+        {
+            Destroy(this.rideController.gameObject);
+            this.rideController = null;
+        }
 
-        //if (this.rideController == null)
-        //{
-        //    this.anim.transform.localPosition = Vector3.zero;
-        //    this.anim.SetLayerWeight(1, 0);
-        //}
-        //else
-        //{
-        //    this.rideController.SetRider(this);
-        //    this.anim.SetLayerWeight(1, 1);
-        //}
+        if (this.rideController == null)
+        {
+            this.anim.transform.localPosition = Vector3.zero;
+            this.anim.SetLayerWeight(1, 0);
+        }
+        else
+        {
+            this.rideController.SetRider(this);
+            this.anim.SetLayerWeight(1, 1);
+        }
     }
 
     public void SetRidePotision(Vector3 position)
@@ -152,4 +153,72 @@ public class EntityController : MonoBehaviour,IEntityNofity
         this.anim.transform.position = position + (this.anim.transform.position - this.rideBone.position);
     }
 
+    public void OnEntityChanged(Entity entity, int param)
+    {
+        //throw new System.NotImplementedException();
+    }
+
+    public void OnEntityEvent(EntityEvent @event)
+    {
+        //throw new System.NotImplementedException();
+    }
+
+    void OnMouseDown()
+    {
+        Creature target = this.entity as Creature;
+        if (target.IsCurrentPlayer)
+            return;
+        BattleManager.Instance.CurrentTarget = this.entity as Creature;
+    }
+
+    public void PlayAnim(string name)
+    {
+        this.anim.SetTrigger(name);
+    }
+
+    public void SetStandBy(bool standby)
+    {
+        this.anim.SetBool("Standby", standby);
+    }
+
+    //public void UpdateDirection()
+    //{
+    //    this.direction = GameObjectTool.LogicToWorld(entity.direction);
+    //    this.transform.forward = this.direction;
+    //    this.lastRotation = this.rotation;
+    //}
+
+    public void PlayEffect(EffectType type, string name, Creature target, float duration)
+    {
+        Transform transform = target.Controller.GetTransform();
+        if (type == EffectType.Position || type == EffectType.Hit)
+        {
+            FXManager.Instance.PlayEffect(type, name, transform, target.GetHitOffset(), duration);
+        }
+        this.EffectMgr.PlayEffect(type, name, transform, target.GetHitOffset(),duration); 
+    }
+
+    public Transform GetTransform()
+    {
+        return this.transform;
+    }
+
+    public void PlayEffect(EffectType type, string name, NVector3 position, float duration)
+    {
+        if (type == EffectType.Position || type == EffectType.Hit)
+            FXManager.Instance.PlayEffect(type, name, null, GameObjectTool.LogicToWorld(position), duration);
+        else
+            this.EffectMgr.PlayEffect(type, name, null, GameObjectTool.LogicToWorld(position), duration);
+    }
+
+    public void UpdateDirection()
+    {
+        this.position = GameObjectTool.LogicToWorld(entity.position);
+        this.direction = GameObjectTool.LogicToWorld(entity.direction);
+
+        this.rb.MovePosition(this.position);
+        this.transform.forward = this.direction;
+        this.lastPosition = this.position;
+        this.lastRotation = this.rotation;
+    }
 }

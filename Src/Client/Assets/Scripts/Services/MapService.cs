@@ -6,6 +6,7 @@ using Common.Data;
 using SkillBridge.Message;
 using Models;
 using Managers;
+using Entities;
 
 namespace Services
 {
@@ -13,12 +14,14 @@ namespace Services
     {
 
         public int CurrentMapId = 0;
+        private bool loadingDone = true;
         public MapService()
         {
             MessageDistributer.Instance.Subscribe<MapCharacterEnterResponse>(this.OnMapCharacterEnter);
             MessageDistributer.Instance.Subscribe<MapCharacterLeaveResponse>(this.OnMapCharacterLeave);
 
             MessageDistributer.Instance.Subscribe<MapEntitySyncResponse>(this.OnMapEntitySync);
+            SceneManager.Instance.onSceneLoadDone += OnLoadDone;
             
         }
 
@@ -26,6 +29,7 @@ namespace Services
         {
             MessageDistributer.Instance.Unsubscribe<MapCharacterEnterResponse>(this.OnMapCharacterEnter);
             MessageDistributer.Instance.Unsubscribe<MapCharacterLeaveResponse>(this.OnMapCharacterLeave);
+            SceneManager.Instance.onSceneLoadDone -= OnLoadDone;
         }
 
         public void Init()
@@ -38,26 +42,43 @@ namespace Services
             Debug.LogFormat("OnMapCharacterEnter:Map:{0} Count:{1}", response.mapId, response.Characters.Count);
             foreach (var cha in response.Characters)
             {
-                if (User.Instance.CurrentCharacter == null || (cha.Type == CharacterType.Player && User.Instance.CurrentCharacter.Id == cha.Id))
+                if (User.Instance.CurrentCharacterInfo == null || (cha.Type == CharacterType.Player && User.Instance.CurrentCharacterInfo.Id == cha.Id))
                 {//当前角色切换地图
-                    User.Instance.CurrentCharacter = cha;
+                    User.Instance.CurrentCharacterInfo = cha;
+                    if (User.Instance.CurrentCharacter == null)
+                    {
+                        User.Instance.CurrentCharacter = new Character(cha);
+                    }
+                    else
+                    {
+                        User.Instance.CurrentCharacter.UpdateInfo(cha);
+                    }
+                    User.Instance.CurrentCharacter.ready = false;
+                    User.Instance.CharacterInited();
+                    CharacterManager.Instance.AddCharacter(User.Instance.CurrentCharacter);
+                    if (CurrentMapId != response.mapId)
+                    {
+                        this.EnterMap(response.mapId);
+                        this.CurrentMapId = response.mapId;
+                    }
+                    continue;
                 }
-                CharacterManager.Instance.AddCharacter(cha);
-            }
-            if (CurrentMapId != response.mapId)
-            {
-                this.EnterMap(response.mapId);
-                this.CurrentMapId = response.mapId;
+                CharacterManager.Instance.AddCharacter(new Character(cha));
             }
         }
 
         private void OnMapCharacterLeave(object sender, MapCharacterLeaveResponse response)
         {
             Debug.LogFormat("OnMapCharacterLeave: CharID:{0}", response.entityId);
-            if(response.entityId != User.Instance.CurrentCharacter.EntityId)
+            if (response.entityId != User.Instance.CurrentCharacterInfo.EntityId)
                 CharacterManager.Instance.RemoveCharacter(response.entityId);
-            else
+            else {
+                if (User.Instance.CurrentCharacterObject != null)
+                {
+                    User.Instance.CurrentCharacterObject.OnLeaveLevel();
+                }
                 CharacterManager.Instance.Clear();
+            }
         }
 
 
@@ -65,10 +86,11 @@ namespace Services
         {
             if (DataManager.Instance.Maps.ContainsKey(mapId))
             {
+                loadingDone = false;
                 MapDefine map = DataManager.Instance.Maps[mapId];
                 User.Instance.CurrentMapData = map;
                 SceneManager.Instance.LoadScene(map.Resource);
-                //SoundManager.Instance.PlayMusic(map.Music);
+                SoundManager.Instance.PlayMusic(map.Music);
             }
             else
                 Debug.LogErrorFormat("EnterMap: Map {0} not existed", mapId);
@@ -78,6 +100,7 @@ namespace Services
 
         public void SendMapEntitySync(EntityEvent entityEvent, NEntity entity,int param)
         {
+            if (!loadingDone) return;
             Debug.LogFormat("MapEntityUpdateRequest :ID:{0} POS:{1} DIR:{2} SPD:{3} ", entity.Id, entity.Position.String(), entity.Direction.String(), entity.Speed);
             NetMessage message = new NetMessage();
             message.Request = new NetMessageRequest();
@@ -94,6 +117,7 @@ namespace Services
 
         void OnMapEntitySync(object sender, MapEntitySyncResponse response)
         {
+            if (!loadingDone) return;
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             sb.AppendFormat("MapEntityUpdateResponse: Entitys:{0}", response.entitySyncs.Count);
             sb.AppendLine();
@@ -116,5 +140,18 @@ namespace Services
             message.Request.mapTeleport.teleporterId = teleporterID;
             NetClient.Instance.SendMessage(message);
         }
+
+        private void OnLoadDone()
+        {
+            if (User.Instance.CurrentCharacter!=null)
+            User.Instance.CurrentCharacter.ready = true;
+            if (User.Instance.CurrentCharacterObject != null)
+            {
+                User.Instance.CurrentCharacterObject.OnEnterLevel();
+            }
+            loadingDone = true;
+        }
+
+
     }
 }
